@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Panerelay"
+  },
+  "extensionDescription": {
+    "message": "Connect local AI agents to one tab or all supported tabs in your existing browser."
+  },
+  "actionTitle": {
+    "message": "Open Panerelay"
+  },
+  "releaseAllControl": {
+    "message": "Release all control"
+  }
+}

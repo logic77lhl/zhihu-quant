@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Panerelay"
+  },
+  "extensionDescription": {
+    "message": "把本地 AI Agent 接入现有浏览器，授权当前标签页或全部受支持网页。"
+  },
+  "actionTitle": {
+    "message": "打开 Panerelay"
+  },
+  "releaseAllControl": {
+    "message": "全部释放"
+  }
+}

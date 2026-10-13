@@ -1,0 +1,61 @@
+{
+  "entityLabel": "库",
+  "entityUnit": "条回答",
+  "tagLabel": "来源",
+  "countLabel": "提及回答数",
+  "countShort": "提及",
+  "minLength": 2,
+  "maxLength": 30,
+  "rejectChars": "的了是在和就都而及与或很你我他她它这那有没不把被给让对从向为以于之其者所吗呢吧啊嘛哦嗯",
+  "requireChars": "[A-Za-z0-9]",
+
+  "rules": [
+    { "tag": "行内代码", "re": "`([A-Za-z][A-Za-z0-9_.+-]{1,28})`", "group": 1 },
+    { "tag": "PyPI链接", "re": "pypi\\.org/(?:project)/([A-Za-z0-9_.-]{2,40})", "group": 1 }
+  ],
+  "dictTag": "词典",
+  "dict": [
+    "django", "flask", "tornado", "bottle", "pyramid", "cherrypy", "aiohttp", "fastapi", "flask-restful",
+    "requests", "urllib3", "httpx", "aiohttp", "httpie", "websockets", "scrapy", "beautifulsoup", "pyquery",
+    "selenium", "playwright", "mechanicalsoup", "colly", "pyspider", "lxml", "html5lib", "feedparser",
+    "sqlalchemy", "peewee", "django-orm", "tortoise-orm", "pony", "records", "dataset", "peewee",
+    "psycopg2", "pymysql", "mysqlclient", "pymongo", "redis", "redis-py", "elasticsearch", "elasticsearch-dsl",
+    "jinja2", "mako", "chameleon", "genshi", "tenacity", "click", "typer", "argparse", "configparser",
+    "numpy", "scipy", "pandas", "polars", "matplotlib", "seaborn", "plotly", "bokeh", "altair", "pygal",
+    "statsmodels", "sympy", "networkx", "igraph", "pydantic", "attrs", "marshmallow", "dataclasses-json",
+    "fabric", "ansible", "salt", "pexpect", "paramiko", "invoke", "docker", "kubernetes",
+    "pytest", "nose", "unittest", "tox", "mock", "hypothesis", "coverage", "fuzz",
+    "loguru", "structlog", "logging", "sentry-sdk", "prometheus-client", "statsd",
+    "pillow", "opencv", "opencv-python", "imageio", "scikit-image", "pillow-simd", "wand",
+    "pdfplumber", "pypdf", "pyexcel", "openpyxl", "xlrd", "tablib", "pytables",
+    "tesseract", "pytesseract", "jieba", "hanlp", "ltp", "nltk", "spacy", "gensim", "transformers",
+    "torch", "pytorch", "tensorflow", "keras", "jax", "sklearn", "scikit-learn", "xgboost", "lightgbm",
+    "catboost", "mlxtend", "imbalanced-learn", "optuna", "mlflow", "wandb", "shap",
+    "sqlmodel", "asyncpg", "aiomysql", "aioredis", "motor", "gevent", "greenlet", "twisted",
+    "trio", "anyio", "uvicorn", "gunicorn", "supervisor", "celery", "rq", "dramatiq", "apscheduler",
+    "watchdog", "psutil", "pywin32", "schedule", "humanize", "arrow", "pendulum",
+    "faker", "factory-boy", "freezegun", "responses", "vcrpy", "betamax",
+    "colorama", "tqdm", "halo", "questionary", "inquirer", "bullet", "yaspin",
+    "rich", "textual", "blessed", "pyfiglet", "art", "termcolor", "tabulate", "prettytable",
+    "attrs", "cattrs", "cattr", "orjson", "ujson", "simplejson", "msgpack", "protobuf",
+    "grpc", "thrift", "avro", "parquet", "fastparquet", "pyarrow", "dask", "modin", "vaex",
+    "pipenv", "poetry", "setuptools", "twine", "build", "hatch", "flit", "conda",
+    "certifi", "chardet", "charset-normalizer", "idna", "unicodecsv", "cchardet", "regex",
+    "cython", "numba", "pythran", "pybind11", "cffi", "ctypes", "multiprocessing", "concurrent",
+    "schedule", "dbutils", "records", "peewee", "attrs", "click", "typer"
+  ],
+  "noise": [
+    "python", "pip", "conda", "github", "gitlab", "code", "data", "file", "line", "class",
+    "import", "from", "def", "return", "print", "self", "none", "true", "false", "http", "https",
+    "问题", "答案", "项目", "工具", "方法", "函数", "框架", "代码", "环境", "版本", "例子", "示例"
+  ],
+
+  "notes": [
+    "**正文是全文，不是摘要。**Panerelay 的 <code>question</code> 命令返回的 <code>content</code> 被截断到 200 字符（中位数仅 36），必须用 <code>answer-detail --max-content 0</code> 逐条取全文才能做实体抽取。",
+    "库名识别三层：行内代码（<code>`pandas`</code>，最可靠）→ PyPI 链接 → 精选词典补裸库名。",
+    "**「提及回答数」不等于热度**：它表示有多少条不同回答提到了这个库。「最高赞」是提到它的回答里赞数最高那条的赞数，一个库被多条回答提到时会被最热的那条拉高。",
+    "**大小写已归并**（<code>Sklearn</code> 与 <code>scikit-learn</code> 视为同一实体），展示时保留首次出现的写法。",
+    "**pandas 与 pandas-profiling 会分别计入**：它们出现在同一条回答里时各算一次，这是有意的——它们确实是两个库。",
+    "每个库最多展示 8 条溯源样本，不是全部出现位置。"
+  ]
+}

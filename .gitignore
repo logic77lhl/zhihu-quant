@@ -1,0 +1,26 @@
+# 安装时生成的本地配置（含本机绝对路径）
+config.json
+
+# 抓取过程的断点续跑状态
+*.state.json
+
+# 报告产物（数据量大，不进仓库）
+*.html
+!extension/**/*.html
+!extension/**/src/**/*.html
+*.md
+!README.md
+!docs/*.md
+!pipeline/presets/README.md
+!skills/**/*.md
+
+# 系统与编辑器
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# Node
+node_modules/
+npm-debug.log*
