@@ -74,6 +74,34 @@ node pipeline\pipeline.mjs 28193957 --preset books
 
 ---
 
+## 两个抓取器，选哪个
+
+| | `fetch-answers.mjs` | `fetch-answers-api.mjs` |
+|---|---|---|
+| 方式 | 逐条 `answer-detail` | 分页打 `/api/v4/questions/<id>/answers` |
+| 上限 | **1000 条**（该命令无分页参数） | **无上限** |
+| 请求数 | N 次 | N/20 次 |
+| 380 条回答 | 5 分 06 秒 | 约 40 秒 |
+| 3700 条回答 | 约 47 分钟 | 约 6 分钟 |
+| 正文 | 纯文本 | HTML，需去标签（已实测与前者逐字一致） |
+
+**回答数 ≤ 1000 用前者，超过就用后者。**
+
+```powershell
+# 默认（≤1000 条）
+node pipeline\pipeline.mjs 28193957 --preset books
+
+# 回答数 >1000，改用分页接口
+node pipeline\fetch-answers-api.mjs 1937248651517863299 --sorts default,created
+node pipeline\extract-entities.mjs <out>.json --preset books
+node pipeline\render-report.mjs <out>-entities.json
+```
+
+`fetch-answers-api.mjs` 会读接口返回的 `paging.totals`，并在收尾时核对实际条数，
+差值会打印出来（差额通常是平台已删除或隐藏的回答）。
+
+---
+
 ## 目录结构
 
 ```
@@ -177,6 +205,8 @@ node pipeline\extract-entities.mjs <answers.json> --preset books --dict extra.tx
 | 抓取返回 401 | 同「Cookie 注入」那行 |
 | `PANERELAY_NATIVE_HOST` 缺失 | 跑 `npx --yes @panerelay/setup` |
 | PowerShell 报 .ps1 语法错误 | 文件被编辑器存成了无 BOM 的 UTF-8，PowerShell 5.1 会按系统 ANSI 代码页解析。加回 BOM 即可 |
+| **传 URL 时退出码非 0，但返回看起来像服务端错误** | 多半是 `&` 被 shell 当成命令分隔符了。**不要直接 `cmd.exe /c panerelay <url>`** —— 用 `panerelay-run.mjs` 里的 `panerelay()` 包装，它绕开 shell |
+| 怀疑参数被吃了 | 跑 `node pipeline\test-shell-injection.mjs`（19 项回归测试）。panerelay 的响应有 `url` 字段会回显实际请求的 URL，拿它对比最可靠 |
 
 ---
 

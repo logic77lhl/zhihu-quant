@@ -1,17 +1,22 @@
 // Panerelay 桥接与 Cookie 注入健康检查
-// 用法: node check.mjs
+// 用法: node check-bridge.mjs
 // 退出码: 0=OK  2=BRIDGE_DOWN  3=EDGE_NOT_STARTED
-import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { panerelay } from './panerelay-run.mjs';
 
+function resolveExtensionDir() {
+  try {
+    const c = JSON.parse(fs.readFileSync(new URL('../config.json', import.meta.url), 'utf8').replace(/^\uFEFF/, ''));
+    if (c.extensionDir) return c.extensionDir;
+  } catch {}
+  return path.join(process.env.USERPROFILE || process.env.HOME || '', '.panerelay', 'extension');
+}
 const HOT = 'https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=2';
 const API = 'https://www.zhihu.com/api/v4/me';
 
-function pr(args, timeout = 60000) {
-  return spawnSync('cmd.exe', ['/c', 'panerelay', ...args], {
-    encoding: 'utf8', timeout, maxBuffer: 1 << 26,
-  });
-}
-const out = (r) => ((r.stdout || '') + (r.stderr || '')).trim();
+const pr = (args, timeout = 60000) => panerelay(args, { timeout });
+const out = (r) => (r.text ?? '');
 
 const say = (ok, label, detail) =>
   console.log(`${ok ? 'OK  ' : 'FAIL'}  ${label.padEnd(22)}${detail ?? ''}`);
@@ -54,10 +59,10 @@ say(n > 0, 'Cookie 注入', `attachedCookieCount=${n}  HTTP ${st}`);
 if (n === 0) {
   console.log('');
   console.log('  桥接是通的，但一个 Cookie 都没带上 —— 扩展缺少 host 授权。');
-  console.log('  检查扩展目录的 manifest.json 是否含：');
+  const extDir = resolveExtensionDir();
+  console.log('  检查扩展目录的 manifest.json 是否含：' + extDir);
   console.log('    "host_permissions": ["*://*.zhihu.com/*", "*://zhihu.com/*"]');
-  console.log('  修法: 重新运行仓库根目录的 install.ps1，或手动改后重启 Edge。');
-  console.log('  详见 Skill 的 references/playbook.md「两个已知的、会误导人的坑」①');
+  console.log('  改完重启 Edge 生效。详见 SKILL.md「两个已知的、会误导人的坑」①');
   process.exit(3);
 }
 

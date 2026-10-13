@@ -12,7 +12,7 @@
 //   q<id>-entities.json           规范化实体
 //   q<id>-<问题标题>.html/.md     报告
 //
-// 输出目录由 resolveOutDir() 决定，见该函数注释。
+// 输出目录由 resolveOutDir() 决定，默认 ~/Documents/zhihu-quant
 // 前置条件: Edge 必须用安装脚本创建的「Edge (Panerelay)」快捷方式启动。
 // 自检: node pipeline/check-bridge.mjs
 
@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
-// 输出目录：环境变量 ZHIHU_QUANT_OUT > 安装时写入的 config.json > ~/Documents/zhihu-quant
+// 输出目录：环境变量 ZHIHU_QUANT_OUT > 仓库 config.json > ~/Documents/zhihu-quant
 function resolveOutDir() {
   if (process.env.ZHIHU_QUANT_OUT) return process.env.ZHIHU_QUANT_OUT;
   for (const p of [path.join(HERE, '..', 'config.json'), path.join(HERE, '..', '..', 'config.json')]) {

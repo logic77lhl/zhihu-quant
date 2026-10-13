@@ -7,13 +7,13 @@
 //   node fetch-answers.mjs 28193957 --concurrency 3 --sleep 80
 //
 // 设计要点（都是踩过坑的）:
-//   - 必须 spawn cmd.exe /c，直接 spawn .cmd 会静默失败（exit 0、stdout 空）
+//   - 必须走 panerelay-run.mjs：绕开 cmd.exe，URL 里的 & | < > 不会被当命令分隔符
 //   - --max-content 0 才是全文；question 命令的 content 被截断到 200 字符
 //   - 断点续跑：state 落在 <out>.state.json，中断后重跑会跳过已完成的
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { panerelay } from './panerelay-run.mjs';
 
 const argv = process.argv.slice(2);
 const qid = argv.find((a) => /^\d+$/.test(a));
@@ -44,12 +44,9 @@ fs.mkdirSync(D, { recursive: true });
 const outFile = OUT || `${D}q${qid}-answers-full.json`;
 const stateFile = outFile + '.state.json';
 
-const run = (args, timeout = 90000) => {
-  const r = spawnSync('cmd.exe', ['/c', 'panerelay', ...args], {
-    encoding: 'utf8', timeout, maxBuffer: 1 << 26,
-  });
-  return ((r.stdout || '') + (r.stderr || '')).trim();
-};
+// 统一调用层：绕开 cmd.exe，URL 里的 & | < > ^ 不会被当命令分隔符
+// 详见 panerelay-run.mjs 顶部注释。回归测试见 test-shell-injection.mjs。
+const run = (args, timeout = 90000) => panerelay(args, { timeout }).text;
 const parse = (t) => { try { const j = JSON.parse(t); return Array.isArray(j) ? j[0] : j; } catch { return null; } };
 const parseAll = (t) => { try { const j = JSON.parse(t); return Array.isArray(j) ? j : (j?.items || j?.data || []); } catch { return []; } };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

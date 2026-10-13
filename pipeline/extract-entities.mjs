@@ -115,13 +115,14 @@ for (const a of answers) {
 
       const key = (P.caseSensitive ? title : title.toLowerCase());
       if (!byName.has(key)) {
-        byName.set(key, { name: title, tag: rule.tag, count: 0, ids: new Set(), votesSum: 0, maxVotes: 0, samples: [] });
+        byName.set(key, { name: title, tag: rule.tag, count: 0, ids: new Set(), votesSum: 0, logSum: 0, maxVotes: 0, samples: [] });
       }
       const rec = byName.get(key);
       if (rec.ids.has(a.id)) continue;      // 同一回答内同一实体只计一次
       rec.count++;
       rec.ids.add(a.id);
       rec.votesSum += a.votes || 0;
+      rec.logSum += Math.log10(1 + (a.votes || 0));   // 阻尼热度：兼顾「多少人推」与「推的人多有分量」
       if ((a.votes || 0) > rec.maxVotes) rec.maxVotes = a.votes || 0;
       if (rec.samples.length < (P.maxSamples ?? 8)) {
         const anchor = rule.anchor ? text.indexOf(rule.anchor) : (m.index ?? 0);
@@ -147,12 +148,13 @@ for (const a of answers) {
       if (!title) continue;
       layerHits[P.dictTag || '词典'] = (layerHits[P.dictTag || '词典'] || 0) + 1;
       const key = (P.caseSensitive ? title : title.toLowerCase());
-      if (!byName.has(key)) byName.set(key, { name: title, tag: P.dictTag || '词典', count: 0, ids: new Set(), votesSum: 0, maxVotes: 0, samples: [] });
+      if (!byName.has(key)) byName.set(key, { name: title, tag: P.dictTag || '词典', count: 0, ids: new Set(), votesSum: 0, logSum: 0, maxVotes: 0, samples: [] });
       const rec = byName.get(key);
       if (rec.ids.has(a.id)) continue;
       rec.count++;
       rec.ids.add(a.id);
       rec.votesSum += a.votes || 0;
+      rec.logSum += Math.log10(1 + (a.votes || 0));
       if ((a.votes || 0) > rec.maxVotes) rec.maxVotes = a.votes || 0;
       if (rec.samples.length < (P.maxSamples ?? 8)) {
         const i = text.indexOf(d);
@@ -170,6 +172,8 @@ const entities = [...byName.values()]
   .map((r) => ({
     name: r.name, tag: r.tag, count: r.count,
     maxVotes: r.maxVotes,
+    votesSum: r.votesSum,
+    logSum: Number(r.logSum.toFixed(2)),
     avgVotes: r.count ? Math.round(r.votesSum / r.count) : 0,
     samples: r.samples,
   }))
