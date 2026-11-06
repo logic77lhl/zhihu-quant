@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 zhihu-quant contributors
+Copyright (c) 2026 logic77lhl
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,13 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-本仓库包含 extension/ 目录下的 Panerelay 浏览器扩展构建产物。
-
-Panerelay: https://github.com/F-loat/panerelay  (MIT, Copyright (c) F-loat)
-本项目对其 manifest.json 追加了 host_permissions 字段，该改动同步至上游源码。
-
-知乎内容版权归知乎所有。本工具仅读取用户本人在浏览器中已可访问的内容，
-不含任何绕过风控、验证码或付费限制的逻辑。
