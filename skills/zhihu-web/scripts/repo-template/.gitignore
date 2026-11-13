@@ -1,0 +1,12 @@
+node_modules/
+*.state.json
+*.log
+.DS_Store
+
+# 绝不提交凭据 / 本机配置
+config.json
+service.json
+opencode.jsonc
+opencode.jsonc.bak
+.env
+*.key

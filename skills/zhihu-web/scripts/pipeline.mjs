@@ -4,17 +4,17 @@
 //   node pipeline.mjs <问题ID> --preset books [选项]
 //
 //   node pipeline.mjs 28193957 --preset books
-//   node pipeline.mjs 24590883 --preset pythonlibs --concurrency 3 --sleep 60
+//   node pipeline.mjs 24590883 --preset pythonlibs --concurrency 3
 //   node pipeline.mjs 28193957 --preset books --skip-fetch     # 复用已有 answers-full.json
 //
-// 产物（都在输出目录，默认 ~/Documents/zhihu-quant）:
-//   q<id>-answers-full.json       全部回答：全文 + 赞数 + 时间 + 评论
+// 产物（目录由 resolveOutDir() 决定，默认 ~/Documents/zhihu-quant）:
+//   q<id>-answers-full.json       全部回答：全文 + 赞数 + 时间 + 评论 + 内容性质标志
 //   q<id>-entities.json           规范化实体
 //   q<id>-<问题标题>.html/.md     报告
 //
-// 输出目录由 resolveOutDir() 决定，默认 ~/Documents/zhihu-quant
-// 前置条件: Edge 必须用安装脚本创建的「Edge (Panerelay)」快捷方式启动。
-// 自检: node pipeline/check-bridge.mjs
+// 前置条件: Edge 必须用带 --load-extension 的方式启动（即 start-edge.cmd）。
+//           桌面快捷方式「Edge (Panerelay)」只是它的便利包装，**不是必需**。
+// 自检: node doctor.mjs（全量）或 node check-bridge.mjs（只看桥接）
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -53,7 +53,7 @@ const sh = (cmd, args, label) => {
   const r = spawnSync(cmd, args, { stdio: 'inherit', cwd: HERE, shell: false });
   if (r.status !== 0) {
     console.error(`\n✗ ${label} 失败（退出码 ${r.status}）`);
-    if (label.includes('抓取')) console.error('  常见原因: Edge 不是用「Edge (Panerelay)」快捷方式启动的。先跑 node check-bridge.mjs');
+    if (label.includes('抓取')) console.error('  常见原因: Edge 不是用带 --load-extension 启动的。快捷方式不是必需，跑 start-edge.cmd 即可；先跑 node check-bridge.mjs 看指引。');
     process.exit(r.status || 1);
   }
 };
@@ -63,16 +63,21 @@ const bridge = spawnSync('node', [path.join(HERE, 'check-bridge.mjs')], { encodi
 const bTxt = ((bridge.stdout || '') + (bridge.stderr || '')).trim();
 console.log(bTxt.split('\n').map((l) => (l.startsWith('OK') || l.startsWith('FAIL') ? l : '  ' + l)).join('\n'));
 if (bridge.status !== 0 && !has('--skip-fetch')) {
-  console.error('\n✗ 桥接不通，已中止。先用桌面「Edge (Panerelay)」启动 Edge。');
+  console.error('\n✗ 桥接不通，已中止。需要用带 --load-extension 的方式启动 Edge（快捷方式不是必需）：');
   process.exit(2);
 }
 
 // 1. 抓取
+// 用 fetch-answers-api.mjs（分页接口）而不是 fetch-answers.mjs：
+//   · 后者走 answer-detail 逐条抓（约 1.2 秒/条），比分页慢一个量级
+//   · 更关键：answer-detail **不返回 answer_type / 机构号**，
+//     走它拿到的产物做不了内容性质判定（盐选/小说识别）——
+//     而分页接口带 include 就能一次拿齐。
 if (has('--skip-fetch') && fs.existsSync(answersFile)) {
   console.log(`\n\x1b[36m▸ 抓取\x1b[0m  跳过，复用 ${path.basename(answersFile)}`);
 } else {
-  const args = [path.join(HERE, 'fetch-answers.mjs'), QID, '--concurrency', conc, '--sleep', slp];
-  if (limitArg) args.push('--limit', limitArg);
+  const args = [path.join(HERE, 'fetch-answers-api.mjs'), QID, '--concurrency', conc];
+  if (limitArg) args.push('--max-pages', String(Math.ceil(Number(limitArg) / 20) || 1));
   sh('node', args, `抓取 question/${QID} 全部回答`);
 }
 

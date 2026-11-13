@@ -2,6 +2,9 @@
 
 > 这份文档记录的是**踩过的坑和验证过的判断**，不是理想状态下的用法。
 > 写给下一个接手这件事的 AI 或人。
+>
+> **注意**：本文只覆盖「回答数不多于 1000、且要统计某类实体」的老场景。
+> 回答更多、或要做观点聚类 / 成页阅读，请改读 `references/pipeline-v2.md`。
 
 ---
 
@@ -57,8 +60,12 @@ panerelay fetch "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limi
 
 - `question` 命令收**数字 ID**，不收 URL
 - 输出是**顶层 JSON 数组**，不是带 `items` 的对象
-- Node 里必须 `spawnSync('cmd.exe', ['/c','panerelay',...])`；直接 spawn `.cmd` **静默失败**（exit 0、stdout 空、无报错）
-- 必须用桌面「Edge (Panerelay)」快捷方式启动 Edge；普通图标启动扩展不加载
+- Node 里**经 `panerelay-run.mjs` 调用**（绕开 `.cmd` 垫片，直接用 node 跑 CLI 真实入口）。
+  自己拼 `spawnSync('cmd.exe', ['/c','panerelay',...])` 会让 URL 里的 `&` 被当命令分隔符，
+  命令被劈成两半 —— 表现为 exit code 非 0，**看起来像服务端报错**。
+  直接 spawn `.cmd` 则会**静默失败**（exit 0、stdout 空、无报错）。两种都别用。
+- 必须用带 `--load-extension` 的方式启动 Edge（跑 `~/.panerelay/start-edge.cmd`）；
+  普通图标启动扩展不加载。**桌面快捷方式只是便利包装，不是必需**（2026-10-15 修正）
 
 ---
 
@@ -106,7 +113,7 @@ panerelay zhihu answer-detail <回答ID> --max-content 0 --json
 也**没有观察到 DNR session 规则串扰**（并发 10 时 fail 仍为 0）。但收益也没了，没必要冒险。
 
 ```bash
-node tools/fetch-answers.mjs <问题ID> --concurrency 3 --sleep 60
+node "$SCRIPTS\fetch-answers-api.mjs" <问题ID> --concurrency 3
 ```
 
 脚本自带断点续跑，中断后重跑同一命令即可。
@@ -177,9 +184,25 @@ L0 噪音过滤      贯穿三层
 
 字数差 44 倍，实体数差 60 个。**用摘要做的抽取，结论是残缺的。**
 
+2026-10 补充：后来发现分页接口 `include=data[*].content` 直接返回全文 HTML，
+去标签后与 `answer-detail` 逐字一致，所以拿全量正文不再需要 44 倍的逐条请求。
+详见 `pipeline-v2.md` 第 2 节。
+
 顺带一个观察：词典里的 `logging`（Python 标准库）拿到 26 次提及，排在 TOP 12。
 它是标准库不是「相见恨晚」的第三方库 —— **标准库要不要算，取决于问题问的是什么，
 预设应该据此调词典。**
+
+### 实测教训六（2026-10 新增）：正则抽书名的召回是坏的
+
+只认书名号 + 引号 + 词典，会**漏掉裸书名**。实测 question/491790104：
+
+| 书 | 正文提到 | 赞和 | 正则收录 |
+|---|---|---|---|
+| 转型中的地方政府 | 15 条 | 11,334 | 否 |
+| 以利为利 | 14 条 | 11,286 | 否 |
+
+漏掉的恰好是推荐量最高的那几本，于是那份书单实际是「谁恰好带了书名号」的筛选结果。
+**做书单排行必须换 LLM 抽取**，见 `pipeline-v2.md` 第 3 节。
 
 ---
 
@@ -205,7 +228,7 @@ L0 噪音过滤      贯穿三层
 ## 6. 一条命令跑通
 
 ```bash
-node tools/pipeline.mjs <问题ID> --preset <预设名>
+node "$SCRIPTS\pipeline.mjs" <问题ID> --preset <预设名>
 ```
 
 做完了会自己检查桥接、打印失败原因。产物：
@@ -219,7 +242,7 @@ q<ID>-<问题标题>.html/.md     报告
 复用已有抓取结果（跳过 5-7 分钟）：
 
 ```bash
-node tools/pipeline.mjs <问题ID> --preset <预设名> --skip-fetch
+node "$SCRIPTS\pipeline.mjs" <问题ID> --preset <预设名> --skip-fetch
 ```
 
 换实体类型：**写一个 `presets/xxx.json`，不用改代码。** 字段说明见 `presets/_README.md`。
@@ -263,9 +286,43 @@ node tools/pipeline.mjs <问题ID> --preset <预设名> --skip-fetch
 
 ---
 
-## 9. 还没做的
+## 9. 待办与已结案
+
+> 这一节以前叫「还没做的」，但其中多项已经完成或已被实测否决。
+> **动手前先看这里**，别去重做已经做完的事。
+
+### ✅ 已完成
+
+| 曾经的待办 | 结论 |
+|---|---|
+| 抽取质量没有量化评估 | `eval-extraction.mjs` 已建（分层抽样 + 精确率/召回率/F1 + 混淆矩阵 + 错例明细）。基线：40 条样本总体 97.5% |
+| 抓取没有锁，并发会话会重复抓 | `lock.mjs` 已加并接入 `fetch-answers-api.mjs`。10 项行为测试 + 1 项真实抓取集成测试通过 |
+| 脚本不在 skill 内，推仓库/换机要手工拷 | 已全部迁入 `scripts/`，仓库自包含 |
+| 抓取脚本没拿内容性质字段 | `fetch-answers-api.mjs` 的 include 已含 `answer_type` / 机构号。`pipeline.mjs` 也已改用分页接口（原来走废弃的 `fetch-answers.mjs`，拿不到这些字段） |
+| 报告口径与剔除范围不一致 | 综述按口径分别缓存（`digests` 映射），渲染自动选对应版本 |
+
+### ❌ 已实测否决（别再试）
+
+**三次 LLM 遍历合并成一次** —— 动机是「摘要 / 观点打标 / 抽书名各读一遍全文，融合可省一半时间」。
+实测否决：把「摘要」和「内容性质判定」合并后，同一份 40 条标注样本上
+kind 准确率从 **97.5% 掉到 67.9%**，8 条不一致全是把小说误判成真实经历。
+摘要长度没受影响（中位 48 vs 49 字），**只有判定质量崩了**。
+原因：主任务变成写摘要后，模型不再做「这是真的还是编的」这种批判性判断。
+代码里保留了 `summarize-answers.mjs --with-kind` 开关但标注不推荐、默认关闭。
+详见 `content-kind.md` 第 8 节。
+
+### ⏳ 仍未做
 
 - **给上游提 PR**：`optional_host_permissions` 在侧载场景下无人授权，导致 Cookie 表为空。
   这是真 bug，作者一看就懂。`api.github.com` 和 `codeload.github.com` 在本机可通。
-- **并发上限还没到理论值**：瓶颈在每次调用的进程启动。如果 Panerelay 支持批量或长连接，能再快一个量级。
-- **抽取质量没有量化评估**：目前靠人工看 TOP 20 的溯源。应该做一套标注集算精确率/召回率。
+- **并发上限还没到理论值**：瓶颈在每次调用的进程启动（约 500ms）。
+  `fetch-answers-api.mjs` 实测并发 3→12 吞吐只提升 1.0~1.09x。
+  要再快需要改成常驻子进程复用 —— 但**尚未确认 CLI 是否支持可复用的 stdin/stdout 协议**，
+  所以先别承诺能提速多少，得先量出「进程启动 vs 网络请求」各占多少。
+- **标注基线是 AI 标的**：`eval-extraction.mjs` 的 97.5% 由 AI 标注得出，
+  且标注者与预测模型同族 —— 属于一致性检查，会**系统性高估**真实准确率。
+  要得到可信数字必须人工重标。脚本和流程已就绪，缺的是人。
+- **渲染层无自动化测试**：`verify-output.mjs --html` 覆盖了主要断言（剔除是否生效、
+  综述口径、模板残留），但交互逻辑（筛选/搜索/排序）仍靠浏览器手工验证。
+- **「综合分」加权排序未实现**：需求是量化指标占 70% 权重
+  （点赞 + 评论 + 时间 vs 正文长度 + 是否有摘要），目前只有按赞数 / 时间 / 评论单维排序。

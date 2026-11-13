@@ -34,6 +34,8 @@ Panerelay 走另一条路：复用浏览器里已登录的会话，由扩展代�
 
 **这个仓库是一个安装包，不是代码集合。** 环境修复都固化了。
 
+换新机器请先读 **[SETUP.md](SETUP.md)** —— 完整装机步骤，每一步都写了为什么和怎么验证。
+
 ---
 
 ## 快速开始
@@ -52,14 +54,18 @@ powershell -ExecutionPolicy Bypass -File install.ps1
 3. 自检：
 
 ```powershell
-node pipeline\check-bridge.mjs
+$S = ".\skills\zhihu-web\scripts"
+node "$S\check-bridge.mjs"
 ```
 
 看到三行 OK 就可以开工了：
 
 ```powershell
-node pipeline\pipeline.mjs 28193957 --preset books
+$S = ".\skills\zhihu-web\scripts"
+node "$S\pipeline.mjs" 28193957 --preset books
 ```
+
+> 所有脚本都在 `skills\zhihu-web\scripts\`。仓库里只有这一份，没有第二份副本。
 
 380 条回答约 5 分钟，519 条约 7 分钟。产出 HTML 报告，自动用默认浏览器打开都不做，直接看文件。
 
@@ -92,13 +98,15 @@ node pipeline\pipeline.mjs 28193957 --preset books
 **回答数 ≤ 1000 用前者，超过就用后者。**
 
 ```powershell
+$S = ".\skills\zhihu-web\scripts"
+
 # 默认（≤1000 条）
-node pipeline\pipeline.mjs 28193957 --preset books
+node "$S\pipeline.mjs" 28193957 --preset books
 
 # 回答数 >1000，改用分页接口
-node pipeline\fetch-answers-api.mjs 1937248651517863299 --sorts default,created
-node pipeline\extract-entities.mjs <out>.json --preset books
-node pipeline\render-report.mjs <out>-entities.json
+node "$S\fetch-answers-api.mjs" 1937248651517863299 --sorts default,created
+node "$S\extract-entities.mjs" <out>.json --preset books
+node "$S\render-report.mjs" <out>-entities.json
 ```
 
 `fetch-answers-api.mjs` 会读接口返回的 `paging.totals`，并在收尾时核对实际条数，
@@ -111,15 +119,19 @@ node pipeline\render-report.mjs <out>-entities.json
 ```
 install.ps1          一键安装
 uninstall.ps1        卸载（默认保留报告数据）
+SETUP.md             换机部署指南（与 skills/zhihu-web/references/setup.md 内容同步）
 extension/           预构建的 Panerelay 扩展，已打好 host_permissions 补丁
-pipeline/            抓取 → 抽取 → 渲染
-  pipeline.mjs         一键管线
-  check-bridge.mjs     健康检查
-  fetch-answers.mjs    抓全部回答（全文 + 赞数 + 时间 + 评论）
-  extract-entities.mjs 按预设抽实体
-  render-report.mjs    实体 → HTML + Markdown
-  presets/             实体类型定义（换类型只改 JSON，不改代码）
-skills/zhihu-web/    Agent Skill，可选安装
+skills/zhihu-web/    Agent Skill —— 脚本只有这一份，别处不再复制
+  SKILL.md             Skill 主入口：路由表、调用纪律、字段可用性
+  references/          11 篇文档：部署 / 流水线 / 脚本速查 / 预设 / 发布 / 视频 / 内容性质
+  scripts/             42 个 .mjs
+    pipeline.mjs         一键管线
+    check-bridge.mjs     健康检查
+    fetch-answers-api.mjs 全量抓取（分页，>1000 条也能拿全）
+    fetch-answers.mjs    逐条抓取（≤1000 条）
+    extract-entities.mjs 按预设抽实体
+    render-report.mjs    实体 → HTML + Markdown
+    presets/             实体类型定义（换类型只改 JSON，不改代码）
 docs/PLAYBOOK.md     实战手册：所有踩过的坑与判断依据
 config.json          安装时生成，记录输出目录等
 ```
@@ -129,26 +141,28 @@ config.json          安装时生成，记录输出目录等
 ## 常用命令
 
 ```powershell
+$S = ".\skills\zhihu-web\scripts"
+
 # 一键跑完整流程
-node pipeline\pipeline.mjs <问题ID> --preset books
+node "$S\pipeline.mjs" <问题ID> --preset books
 
 # 改完预设重跑，跳过重新抓取（省 5-7 分钟）
-node pipeline\pipeline.mjs <问题ID> --preset books --skip-fetch
+node "$S\pipeline.mjs" <问题ID> --preset books --skip-fetch
 
 # 只健康检查
-node pipeline\check-bridge.mjs
+node "$S\check-bridge.mjs"
 
 # 换实体类型：写一个 presets/xxx.json
-node pipeline\pipeline.mjs <问题ID> --preset mylib
+node "$S\pipeline.mjs" <问题ID> --preset mylib
 
 # 给词典加词
-node pipeline\extract-entities.mjs <answers.json> --preset books --dict extra.txt
+node "$S\extract-entities.mjs" <answers.json> --preset books --dict extra.txt
 ```
 
 选项：
 
 ```
---preset <name>      实体预设，见 pipeline/presets/
+--preset <name>      实体预设，见 skills/zhihu-web/scripts/presets/
 --config <path>      自定义配置
 --dict <file.txt>    往词典追加词（一行一个，# 开头为注释）
 --concurrency <n>    抓取并发，默认 3。不要超过 3，再高无收益（实测）
@@ -167,8 +181,9 @@ node pipeline\extract-entities.mjs <answers.json> --preset books --dict extra.tx
 |---|---|---|
 | `books` | 书名 | `《》` + 直角/弯引号 + 精选词典，三层，带上下文守卫 |
 | `pythonlibs` | Python 库名 | 行内代码 + PyPI 链接 + 精选词典 |
+| `cpu` | CPU 型号 | 型号正则 + 只剥厂牌前缀，`12700` 与 `12700K` 仍是两个 SKU |
 
-**新增实体类型不用改代码**，写一个 `presets/xxx.json`。字段说明见 `pipeline/presets/README.md`。
+**新增实体类型不用改代码**，写一个 `presets/xxx.json`。字段说明见 `skills/zhihu-web/scripts/presets/_README.md`。
 
 ---
 
@@ -210,7 +225,7 @@ node pipeline\extract-entities.mjs <answers.json> --preset books --dict extra.tx
 | `PANERELAY_NATIVE_HOST` 缺失 | 跑 `npx --yes @panerelay/setup` |
 | PowerShell 报 .ps1 语法错误 | 文件被编辑器存成了无 BOM 的 UTF-8，PowerShell 5.1 会按系统 ANSI 代码页解析。加回 BOM 即可 |
 | **传 URL 时退出码非 0，但返回看起来像服务端错误** | 多半是 `&` 被 shell 当成命令分隔符了。**不要直接 `cmd.exe /c panerelay <url>`** —— 用 `panerelay-run.mjs` 里的 `panerelay()` 包装，它绕开 shell |
-| 怀疑参数被吃了 | 跑 `node pipeline\test-shell-injection.mjs`（19 项回归测试）。panerelay 的响应有 `url` 字段会回显实际请求的 URL，拿它对比最可靠 |
+| 怀疑参数被吃了 | 跑 `node skills\zhihu-web\scripts\test-shell-injection.mjs`（19 项回归测试）。panerelay 的响应有 `url` 字段会回显实际请求的 URL，拿它对比最可靠 |
 
 ---
 

@@ -1,17 +1,9 @@
 // Panerelay 桥接与 Cookie 注入健康检查
 // 用法: node check-bridge.mjs
 // 退出码: 0=OK  2=BRIDGE_DOWN  3=EDGE_NOT_STARTED
-import fs from 'node:fs';
-import path from 'node:path';
 import { panerelay } from './panerelay-run.mjs';
+import { bridgeAdvice } from './bridge-advice.mjs';
 
-function resolveExtensionDir() {
-  try {
-    const c = JSON.parse(fs.readFileSync(new URL('../config.json', import.meta.url), 'utf8').replace(/^\uFEFF/, ''));
-    if (c.extensionDir) return c.extensionDir;
-  } catch {}
-  return path.join(process.env.USERPROFILE || process.env.HOME || '', '.panerelay', 'extension');
-}
 const HOT = 'https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=2';
 const API = 'https://www.zhihu.com/api/v4/me';
 
@@ -27,11 +19,7 @@ const whoText = out(who);
 if (/Bridge is unavailable/i.test(whoText) || who.status !== 0) {
   console.log('BRIDGE_DOWN');
   console.log('');
-  console.log('  Panerelay 桥接未连接。');
-  console.log('');
-  console.log('  最常见原因：Edge 不是用带扩展的方式启动的。');
-  console.log('  请用户点击桌面上的「Edge (Panerelay)」快捷方式。');
-  console.log('  不要自行修改浏览器配置。');
+  bridgeAdvice().forEach((l) => console.log(l));
   process.exit(2);
 }
 
@@ -59,8 +47,7 @@ say(n > 0, 'Cookie 注入', `attachedCookieCount=${n}  HTTP ${st}`);
 if (n === 0) {
   console.log('');
   console.log('  桥接是通的，但一个 Cookie 都没带上 —— 扩展缺少 host 授权。');
-  const extDir = resolveExtensionDir();
-  console.log('  检查扩展目录的 manifest.json 是否含：' + extDir);
+  console.log('  检查 C:\\Users\\user\\.panerelay\\extension\\manifest.json 是否含：');
   console.log('    "host_permissions": ["*://*.zhihu.com/*", "*://zhihu.com/*"]');
   console.log('  改完重启 Edge 生效。详见 SKILL.md「两个已知的、会误导人的坑」①');
   process.exit(3);

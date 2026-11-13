@@ -258,8 +258,8 @@ if ($NoSkill) {
 }
 
 # ── 完成 ────────────────────────────────────────────────────
-$checkCmd = 'node "' + $RepoRoot + '\pipeline\check-bridge.mjs"'
-$pipeCmd  = 'node "' + $RepoRoot + '\pipeline\pipeline.mjs" <question-id> --preset books'
+$checkCmd = 'node "' + $RepoRoot + '\skills\zhihu-web\scripts\check-bridge.mjs"'
+$pipeCmd  = 'node "' + $RepoRoot + '\skills\zhihu-web\scripts\pipeline.mjs" <question-id> --preset books'
 
 Write-Host ''
 Write-Host '  安装完成' -ForegroundColor Green

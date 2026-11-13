@@ -30,6 +30,8 @@ But **installing Panerelay from scratch hits three walls**, all solved here:
 
 **This repo is an installer, not a code dump.** The environment fixes are baked in.
 
+Moving to a new machine? Start with **[SETUP.md](SETUP.md)** — full install walkthrough, every step with the why and a way to verify it.
+
 ---
 
 ## Quick start
@@ -47,14 +49,18 @@ Then three steps:
 3. Check the bridge:
 
 ```powershell
-node pipeline\check-bridge.mjs
+$S = ".\skills\zhihu-web\scripts"
+node "$S\check-bridge.mjs"
 ```
 
 Three OK lines and you're ready:
 
 ```powershell
-node pipeline\pipeline.mjs 28193957 --preset books
+$S = ".\skills\zhihu-web\scripts"
+node "$S\pipeline.mjs" 28193957 --preset books
 ```
+
+> Every script lives in `skills\zhihu-web\scripts\`. There is exactly one copy in the repo.
 
 380 answers takes about 5 minutes; 519 about 7.
 
@@ -85,13 +91,15 @@ No admin rights; the registry writes are `HKCU` only.
 **≤1000 answers: use the first. Above that: use the second.**
 
 ```powershell
+$S = ".\skills\zhihu-web\scripts"
+
 # default (≤1000)
-node pipeline\pipeline.mjs 28193957 --preset books
+node "$S\pipeline.mjs" 28193957 --preset books
 
 # >1000 answers: switch to the paginated endpoint
-node pipeline\fetch-answers-api.mjs 1937248651517863299 --sorts default,created
-node pipeline\extract-entities.mjs <out>.json --preset books
-node pipeline\render-report.mjs <out>-entities.json
+node "$S\fetch-answers-api.mjs" 1937248651517863299 --sorts default,created
+node "$S\extract-entities.mjs" <out>.json --preset books
+node "$S\render-report.mjs" <out>-entities.json
 ```
 
 `fetch-answers-api.mjs` reads `paging.totals` and reconciles the actual count at the end; the difference is printed (usually answers deleted or hidden by the platform).
@@ -103,15 +111,19 @@ node pipeline\render-report.mjs <out>-entities.json
 ```
 install.ps1          one-command install
 uninstall.ps1        uninstall (keeps report data by default)
+SETUP.md             machine-migration guide (mirrors skills/zhihu-web/references/setup.md)
 extension/           prebuilt Panerelay extension with the host_permissions patch
-pipeline/            fetch → extract → render
-  pipeline.mjs         the one-command pipeline
-  check-bridge.mjs     health check
-  fetch-answers.mjs    all answers (full text + upvotes + time + comments)
-  extract-entities.mjs entity extraction by preset
-  render-report.mjs    entities → HTML + Markdown
-  presets/             entity-type definitions (change type without touching code)
-skills/zhihu-web/    optional agent skill
+skills/zhihu-web/    the agent skill — the only copy of the scripts
+  SKILL.md             entry point: routing table, invocation rules, field availability
+  references/          11 docs: setup / pipeline / script reference / presets / publish / video
+  scripts/             42 .mjs files
+    pipeline.mjs         the one-command pipeline
+    check-bridge.mjs     health check
+    fetch-answers-api.mjs paginated fetcher (no ceiling)
+    fetch-answers.mjs    per-answer fetcher (≤1000)
+    extract-entities.mjs entity extraction by preset
+    render-report.mjs    entities → HTML + Markdown
+    presets/             entity-type definitions (change type without touching code)
 docs/PLAYBOOK.md     field notes: every trap hit and how it was diagnosed
 config.json          generated at install time (output directory, etc.)
 ```
@@ -121,26 +133,28 @@ config.json          generated at install time (output directory, etc.)
 ## Common commands
 
 ```powershell
+$S = ".\skills\zhihu-web\scripts"
+
 # full pipeline
-node pipeline\pipeline.mjs <question-id> --preset books
+node "$S\pipeline.mjs" <question-id> --preset books
 
 # re-run after editing a preset, reusing the fetched answers (saves 5–7 minutes)
-node pipeline\pipeline.mjs <question-id> --preset books --skip-fetch
+node "$S\pipeline.mjs" <question-id> --preset books --skip-fetch
 
 # health check only
-node pipeline\check-bridge.mjs
+node "$S\check-bridge.mjs"
 
 # new entity type: write presets/xxx.json
-node pipeline\pipeline.mjs <question-id> --preset mylib
+node "$S\pipeline.mjs" <question-id> --preset mylib
 
 # extend the dictionary
-node pipeline\extract-entities.mjs <answers.json> --preset books --dict extra.txt
+node "$S\extract-entities.mjs" <answers.json> --preset books --dict extra.txt
 ```
 
 Options:
 
 ```
---preset <name>      entity preset, see pipeline/presets/
+--preset <name>      entity preset, see skills/zhihu-web/scripts/presets/
 --config <path>      custom config
 --dict <file.txt>    extra dictionary words, one per line, # comments
 --concurrency <n>    fetch concurrency, default 3; higher gives no measurable gain
@@ -159,8 +173,9 @@ Output defaults to `~/Documents/zhihu-quant/`; change it with `-OutDir` at insta
 |---|---|---|
 | `books` | book titles | `《》` + straight/curly quotes + curated dictionary, three tiers, with context guards |
 | `pythonlibs` | Python libraries | inline code + PyPI links + curated dictionary |
+| `cpu` | CPU models | model regex + vendor-prefix stripping only; `12700` and `12700K` stay separate SKUs |
 
-**New entity types need no code** — write `presets/xxx.json`. Field docs are in `pipeline/presets/README.md`.
+**New entity types need no code** — write `presets/xxx.json`. Field docs are in `skills/zhihu-web/scripts/presets/_README.md`.
 
 ---
 
@@ -200,7 +215,7 @@ Quick table:
 | `PANERELAY_NATIVE_HOST` missing | run `npx --yes @panerelay/setup` |
 | PowerShell syntax error in a .ps1 | the file was saved as UTF-8 without BOM; PowerShell 5.1 reads it as the system ANSI code page. Add the BOM back |
 | Non-zero exit when passing a URL, but the response looks like a server error | the `&` was probably eaten by the shell. **Don't call `cmd.exe /c panerelay <url>`** — use the `panerelay()` wrapper in `panerelay-run.mjs`, which bypasses the shell |
-| Suspect arguments are being eaten | run `node pipeline\test-shell-injection.mjs` (19 regression checks). Panerelay's response echoes the actual `url`, which is the most reliable comparison |
+| Suspect arguments are being eaten | run `node skills\zhihu-web\scripts\test-shell-injection.mjs` (19 regression checks). Panerelay's response echoes the actual `url`, which is the most reliable comparison |
 
 ---
 

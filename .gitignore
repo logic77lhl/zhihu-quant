@@ -10,8 +10,9 @@ config.json
 !extension/**/src/**/*.html
 *.md
 !README.md
+!README.en.md
+!SETUP.md
 !docs/*.md
-!pipeline/presets/README.md
 !skills/**/*.md
 
 # 系统与编辑器
